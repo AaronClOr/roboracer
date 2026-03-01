@@ -51,7 +51,7 @@ xhost +local:docker
 Run the sim with this, this will create a terminal in the container of the simulator and then will run this commands: 
 
 ```bash
-docker exec -it roboracer-racer-1 bash -c "cd /opt/roboracer_ws && colcon build --symlink-install"
+docker exec -it roboracer-sim-1 bash -c "source install/setup.bash && ros2 launch f1tenth_gym_ros gym_bridge_launch.py"
 ```
 This will pop up a window of the simulator on Rviz
 
@@ -80,8 +80,9 @@ ros2 run my_racer emergency_break
 Check the Rviz windows, it should move the car and then stop if there is a wall in front.
 
 ### 7. Close everything
-Go to the termnial where you run the sim and just Ctr+c
-in the terminal of the jetson orin, do the same for stopping the node and then type "exit". 
+Go to the termnial where you run the sim and just "Ctr+c". 
+
+In the terminal of the jetson orin, do the same for stopping the node and then type "exit". 
 
 Since we did "docker compose up -d --build", this built and then run the containers in the background, so even if we do not have a process in the containers right now, the containers are still runing in the background. 
 Stop the containers with: 

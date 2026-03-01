@@ -21,7 +21,7 @@ Before starting, ensure your host machine has the following installed:
 ```bash
 # Clone this repo
 git clone https://github.com/AaronClOr/roboracer.git
-cd roboracer-project
+cd roboracer
 
 # Clone the simulator (Must be in the root folder)
 git clone https://github.com/f1tenth/f1tenth_gym_ros.git

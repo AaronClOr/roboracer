@@ -1,0 +1,23 @@
+# --- ROS 2 Build Artifacts ---
+**/install/
+**/build/
+**/log/
+**f1tenth_gym_ros
+
+# --- Python ---
+# Compiled bytecode (makes things faster, but doesn't need to be shared)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- OS / IDE Junk ---
+# Mac/Windows/Linux system files that clutter folders
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Docker ---
+# We want to share the Dockerfile and Compose, but not local data/logs
+*.log
+.docker/

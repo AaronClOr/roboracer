@@ -1,0 +1,47 @@
+services:
+  # --- THE BRAIN (Jetson Orin Emulation - ARM64) ---
+  racer:
+    image: yourusername/roboracer:latest
+    build:
+      context: ./my_racer_jetson
+      dockerfile: Dockerfile
+    platform: linux/arm64
+    network_mode: "host"
+    ipc: "host"
+    stdin_open: true 
+    tty: true        
+    environment:
+      - DISPLAY=${DISPLAY}
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      # FIX: Force UDP to stop the "Failed init_port" SHM errors
+      - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
+    volumes:
+      - ./my_racer_jetson/ros2_ws:/opt/roboracer_ws
+      - /tmp/.X11-unix:/tmp/.X11-unix
+
+  # --- THE SIMULATOR (F1TENTH - x86_64) ---
+  sim:
+    image: f1tenth_gym_ros:latest
+    build:
+      context: ./f1tenth_gym_ros
+      dockerfile: Dockerfile
+    network_mode: "host"
+    ipc: "host"
+    stdin_open: true
+    tty: true
+    environment:
+      - DISPLAY=${DISPLAY}
+      # FIX: Must match the racer's transport settings
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - ./f1tenth_gym_ros:/sim_ws/src/f1tenth_gym_ros
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    working_dir: /sim_ws

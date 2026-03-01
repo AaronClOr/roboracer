@@ -20,11 +20,11 @@ Before starting, ensure your host machine has the following installed:
 ### 1. Clone the Repositories
 ```bash
 # Clone this repo
-git clone <your-repo-url>
+git clone https://github.com/AaronClOr/roboracer.git
 cd roboracer-project
 
 # Clone the simulator (Must be in the root folder)
-git clone [https://github.com/f1tenth/f1tenth_gym_ros.git](https://github.com/f1tenth/f1tenth_gym_ros.git)
+git clone https://github.com/f1tenth/f1tenth_gym_ros.git
 
 ```
 ### 2. Linux Users: Run this to allow the simulator window to open:
@@ -48,7 +48,43 @@ if you are in Linux, first do:
 ```bash
 xhost +local:docker
 ```
+Run the sim with this, this will create a terminal in the container of the simulator and then will run this commands: 
 
 ```bash
 docker exec -it roboracer-racer-1 bash -c "cd /opt/roboracer_ws && colcon build --symlink-install"
 ```
+This will pop up a window of the simulator on Rviz
+
+### 6. Run the jetson container: 
+On a new terminal, this will create a terminal inside the container: 
+```bash
+docker exec -it roboracer-racer-1 bash
+```
+Now that we are inside a terminal, we will be in the directory of "/opt/roboracer_ws" inside the container. We then source our workspace with: 
+
+```bash
+source install/setup.bash
+```
+
+Now we can check if we can see the topics, the simulator its publising with: 
+
+```bash
+ros2 topic list 
+```
+
+We can run a simple node for checking if we can subscribe and publish: 
+
+```bash
+ros2 run my_racer emergency_break 
+```
+Check the Rviz windows, it should move the car and then stop if there is a wall in front.
+
+### 7. Close everything
+Go to the termnial where you run the sim and just Ctr+c
+in the terminal of the jetson orin, do the same for stopping the node and then type "exit". 
+
+Since we did "docker compose up -d --build", this built and then run the containers in the background, so even if we do not have a process in the containers right now, the containers are still runing in the background. 
+Stop the containers with: 
+```bash
+ docker compose down     
+ ```

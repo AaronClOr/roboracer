@@ -21,7 +21,8 @@ setup(
     entry_points={
         'console_scripts': [
             'racer_node = my_racer.racer_node:main', 
-            'emergency_break = my_racer.emergency_break:main'
+            'emergency_break = my_racer.emergency_break:main',
+            'drive2ackermann = my_racer.drive2ackermann_node:main'
         ],
     },
 )

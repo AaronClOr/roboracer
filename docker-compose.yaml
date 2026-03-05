@@ -5,19 +5,35 @@ services:
     build:
       context: ./my_racer_jetson
       dockerfile: Dockerfile
-    platform: linux/arm64
+    #platform: linux/arm64
     network_mode: "host"
     ipc: "host"
+    privileged: true
     stdin_open: true 
-    tty: true        
+    tty: true   
+
+    # --- GPU ACCESS (PC & JETSON) ---
+    runtime: nvidia 
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
     environment:
       - DISPLAY=${DISPLAY}
       - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
       # FIX: Force UDP to stop the "Failed init_port" SHM errors
       - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+
     volumes:
       - ./my_racer_jetson/ros2_ws:/opt/roboracer_ws
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - /dev:/dev
 
   # --- THE SIMULATOR (F1TENTH - x86_64) ---
   sim:

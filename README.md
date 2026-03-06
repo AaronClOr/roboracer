@@ -33,14 +33,24 @@ xhost +local:docker
 ```
 
 ### 3. Build & Launch
+We are going to build in our PCs using a ros humble image, not the container for the Jetson. On the dockerfile is especified to use the jetson contianer so we will pass an argument when we build in our PCs so it injects the image ros humble.
 ```bash
-docker compose up -d --build
+docker compose build --build-arg BASE_IMAGE=osrf/ros:humble-desktop
 ```
+
+Once finished building, we run the 2 containers on the background: 
+```bash
+docker compose up -d
+```
+
+#### Only do it the first time
+
+
 
 ### 4. The "Magic Sync" (First Time Only)
 You must build the ROS 2 workspace inside the racer container once to create the symlinks for live-coding. Run this in your host terminal:
 ```bash
-docker exec -it roboracer-racer-1 bash -c "cd /opt/roboracer_ws && colcon build --symlink-install"
+docker compose run --name racer_debug -it racer bash -c "cd /opt/roboracer_ws && colcon build --symlink-install"
 ```
 
 ### 5. Running the simulator 

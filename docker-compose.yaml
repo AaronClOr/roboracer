@@ -5,6 +5,8 @@ services:
     build:
       context: ./my_racer_jetson
       dockerfile: Dockerfile
+      args:
+        - BASE_IMAGE=osrf/ros:humble-desktop # <--- Esto salva tu PC
     #platform: linux/arm64
     network_mode: "host"
     ipc: "host"

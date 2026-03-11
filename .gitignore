@@ -3,6 +3,7 @@
 **/build/
 **/log/
 **f1tenth_gym_ros
+**AutoDRIVE-RoboRacer-Sim-Racing
 
 # --- Python ---
 # Compiled bytecode (makes things faster, but doesn't need to be shared)

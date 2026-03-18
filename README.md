@@ -23,79 +23,92 @@ Before starting, ensure your host machine has the following installed:
 git clone https://github.com/AaronClOr/roboracer.git
 cd roboracer
 
-# Clone the simulator (Must be in the root folder)
-git clone https://github.com/f1tenth/f1tenth_gym_ros.git
+# Clone the Auto drive simulator
+git clone https://github.com/AutoDRIVE-Ecosystem/AutoDRIVE-RoboRacer-Sim-Racing.git
 
 ```
-### 2. Linux Users: Run this to allow the simulator window to open:
+
+### 2. Build the simulator
+Go inside "AutoDRIVE-RoboRacer-Sim-Racing" folder and build the simulator
 ```bash
-xhost +local:docker
+docker build --tag autodriveecosystem/autodrive_roboracer_sim:latest -f autodrive_simulator.Dockerfile .
+
 ```
 
-### 3. Build & Launch
-We are going to build in our PCs using a ros humble image, not the container for the Jetson. On the dockerfile is especified to use the jetson contianer so we will pass an argument when we build in our PCs so it injects the image ros humble.
+### 3. Build the ros brigde
+Again, inside "AutoDRIVE-RoboRacer-Sim-Racing" folder, build the container for the ros bridge
 ```bash
-docker compose build --build-arg BASE_IMAGE=osrf/ros:humble-desktop
+docker build --tag autodriveecosystem/autodrive_roboracer_api:latest -f autodrive_devkit.Dockerfile .
+
 ```
 
-Once finished building, we run the 2 containers on the background: 
+### 4. Build the container for develpment
+VSCode offers supports for containers develpment, using their tools is very practical because it allows us to debug inside the container so we are going to use it. 
+1. Make sure you have install VS code
+2. Add the extensions "Dev Containers" and "Containers Tools". 
+3. To use it, we need a devcontainer.json which is already also in this repo. 
+
+We only have to open the VS Code from the directory where this project is: 
 ```bash
-docker compose up -d
+cd Roboracer
+code . 
+```
+ This will launch VSCode in this folder and because we have the devcontainer.json it will ask us if we would like to open as a container, and we accept. 
+
+ it will build the container and once done, we are already inside the container ready for develpment. 
+
+
+
+### 5. How to open simulator 
+
+On a terminal, run these commands 
+```bash
+xhost local:root #For linux users
 ```
 
-#### Only do it the first time
-
-
-
-### 4. The "Magic Sync" (First Time Only)
-You must build the ROS 2 workspace inside the racer container once to create the symlinks for live-coding. Run this in your host terminal:
 ```bash
-docker compose run --name racer_debug -it racer bash -c "cd /opt/roboracer_ws && colcon build --symlink-install"
+docker run --name autodrive_roboracer_sim --rm -it \
+ --network=host \
+ --ipc=host \
+ -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+ --env DISPLAY \
+ --privileged \
+ --gpus all \
+ --entrypoint /bin/bash \
+ autodriveecosystem/autodrive_roboracer_sim:latest \
+ -c "./AutoDRIVE\ Simulator.x86_64"
+```
+Now you should see the simulator on your screen. 
+
+
+
+### 6. How to open ros bridge 
+
+On a terminal, run these commands 
+```bash
+xhost local:root #For linux users
 ```
 
-### 5. Running the simulator 
-if you are in Linux, first do: 
 ```bash
-xhost +local:docker
+docker run --name autodrive_roboracer_api --rm -it \
+ --network=host \
+ --ipc=host \
+ -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+ --env DISPLAY \
+ --privileged \
+ --gpus all \
+ --entrypoint /bin/bash \
+ autodriveecosystem/autodrive_roboracer_api:latest \
+ -c "source /opt/ros/humble/setup.bash && source /home/autodrive_devkit/install/setup.bash && ros2 launch autodrive_roboracer bringup_graphics.launch.py"
 ```
-Run the sim with this, this will create a terminal in the container of the simulator and then will run this commands: 
+Now you should see Rviz on your screen. 
 
-```bash
-docker exec -it roboracer-sim-1 bash -c "source install/setup.bash && ros2 launch f1tenth_gym_ros gym_bridge_launch.py"
-```
-This will pop up a window of the simulator on Rviz
+### 6. How to open the container for develpment
 
-### 6. Run the jetson container: 
-On a new terminal, this will create a terminal inside the container: 
-```bash
-docker exec -it roboracer-racer-1 bash
-```
-Now that we are inside a terminal, we will be in the directory of "/opt/roboracer_ws" inside the container. We then source our workspace with: 
+Just open the folder where this repo is in VSCode and click on "reopen as a container". 
+If your simulator and ros bridge are running, you should see the ros2 topics of the ros bridge in this container, just open a terminal with VScode (that terminal will be alreadt inside the container) and type ros2 topic list. 
 
-```bash
-source install/setup.bash
-```
+Now you can develop in this workspace and everything will be store in your computer as well as in the container. 
 
-Now we can check if we can see the topics, the simulator its publising with: 
 
-```bash
-ros2 topic list 
-```
 
-We can run a simple node for checking if we can subscribe and publish: 
-
-```bash
-ros2 run my_racer emergency_break 
-```
-Check the Rviz windows, it should move the car and then stop if there is a wall in front.
-
-### 7. Close everything
-Go to the termnial where you run the sim and just "Ctr+c". 
-
-In the terminal of the jetson orin, do the same for stopping the node and then type "exit". 
-
-Since we did "docker compose up -d --build", this built and then run the containers in the background, so even if we do not have a process in the containers right now, the containers are still runing in the background. 
-Stop the containers with: 
-```bash
- docker compose down     
- ```

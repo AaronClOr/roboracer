@@ -6,7 +6,7 @@ services:
       context: ./my_racer_jetson
       dockerfile: Dockerfile
       args:
-        - BASE_IMAGE=osrf/ros:humble-desktop # <--- Esto salva tu PC
+        - BASE_IMAGE=osrf/ros:humble-desktop # <--- for PC
     #platform: linux/arm64
     network_mode: "host"
     ipc: "host"
@@ -37,29 +37,3 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - /dev:/dev
 
-  # --- THE SIMULATOR (F1TENTH - x86_64) ---
-  sim:
-    image: f1tenth_gym_ros:latest
-    build:
-      context: ./f1tenth_gym_ros
-      dockerfile: Dockerfile
-    network_mode: "host"
-    ipc: "host"
-    stdin_open: true
-    tty: true
-    environment:
-      - DISPLAY=${DISPLAY}
-      # FIX: Must match the racer's transport settings
-      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-      - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    volumes:
-      - ./f1tenth_gym_ros:/sim_ws/src/f1tenth_gym_ros
-      - /tmp/.X11-unix:/tmp/.X11-unix
-    working_dir: /sim_ws

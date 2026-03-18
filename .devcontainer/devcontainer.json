@@ -1,0 +1,17 @@
+{
+    "name": "RoboRacer - PC Development",
+    "dockerComposeFile": "../docker-compose.yaml",
+    "service": "racer",
+    "workspaceFolder": "/opt/roboracer_ws",
+
+    // Ya no necesitas pasarle args aquí porque los lee del docker-compose.yml
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools",
+                "ms-iot.vscode-ros"
+            ]
+        }
+    },
+    "remoteUser": "root"
+}

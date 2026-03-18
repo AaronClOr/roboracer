@@ -22,4 +22,4 @@ Thumbs.db
 # We want to share the Dockerfile and Compose, but not local data/logs
 *.log
 .docker/
-.devcontainer
+

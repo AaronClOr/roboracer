@@ -85,7 +85,7 @@ private:
         auto e_break = std_msgs::msg::Bool();
         
         // 1. Check the safety condition determined by the scan_callback
-        if (ttc <= 1.0) {
+        if (ttc <= 0.5) {
             message_to_publish.data = 0.0; // Override to Brake
             e_break.data = true;
             
@@ -105,26 +105,61 @@ private:
 
     void scan_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg) 
     {
-        /// TODO: calculate TTC
-        int center_index;
-        double distance_front;
-        // auto message_drive = std_msgs::msg::Float32();
-        //message_drive.data = thottle;
- 
-        center_index = scan_msg->ranges.size() / 2;
-        distance_front = scan_msg->ranges[center_index];
+ // 1. Define the total width of the safety cone in degrees
+    const double WINDOW_DEGREES = 20.0;
+    const double WINDOW_RADIANS = WINDOW_DEGREES * (M_PI / 180.0);
 
-        if (speed >= 0.01){
-            // message_drive.data = 1.0;
-            ttc = distance_front/speed;
-            RCLCPP_INFO(this->get_logger(), "TTC: %f", ttc);
-            RCLCPP_INFO(this->get_logger(), "Speed: %f", speed);
-        }
-        else {
-            ttc = 999.9;
-        }
+    int num_points = scan_msg->ranges.size();
 
-        /// TODO: publish drive/brake message
+    // 2. Find the index that points straight ahead (angle == 0.0)
+    //    Instead of assuming center_index = num_points/2, we calculate it
+    //    from angle_min so it works regardless of LiDAR angle convention.
+    int center_index = static_cast<int>(
+        std::round((0.0 - scan_msg->angle_min) / scan_msg->angle_increment)
+    );
+
+    // 3. Calculate half-window in indices
+    int half_window_indices = static_cast<int>(
+        std::floor((WINDOW_RADIANS / 2.0) / scan_msg->angle_increment)
+    );
+
+    int start_idx = center_index - half_window_indices;
+    int end_idx   = center_index + half_window_indices;
+
+    double min_ttc = std::numeric_limits<double>::max();
+    bool found_valid_point = false;
+
+    // 4. Iterate through the cone and compute per-ray TTC
+    for (int i = start_idx; i <= end_idx; ++i) {
+        if (i < 0 || i >= num_points) continue;
+
+        double r = scan_msg->ranges[i];
+        if (!std::isfinite(r) || r < scan_msg->range_min || r > scan_msg->range_max) continue;
+
+        // Compute the angle of this ray relative to forward (0.0)
+        double ray_angle = scan_msg->angle_min + i * scan_msg->angle_increment;
+
+        // Project: only the forward component of distance matters for closing speed
+        // r_projected = r * cos(ray_angle)  →  how far ahead the obstacle is
+        double r_projected = r * std::cos(ray_angle);
+        if (r_projected <= 0.0) continue; // behind or perpendicular, skip
+
+        if (speed > 0.05) {
+            double ray_ttc = r_projected / speed;
+            if (ray_ttc < min_ttc) {
+                min_ttc = ray_ttc;
+                found_valid_point = true;
+            }
+        }
+    }
+
+    // 5. Update global TTC
+    if (found_valid_point) {
+        ttc = min_ttc;
+        RCLCPP_INFO(this->get_logger(), "Min TTC in cone: %.2f s", ttc);
+    } else {
+        ttc = 999.9;
+    }
 
     }
 

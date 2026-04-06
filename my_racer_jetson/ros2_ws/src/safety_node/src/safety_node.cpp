@@ -85,7 +85,7 @@ private:
         auto e_break = std_msgs::msg::Bool();
         
         // 1. Check the safety condition determined by the scan_callback
-        if (ttc <= 0.5) {
+        if (ttc <= 0.2) {
             message_to_publish.data = 0.0; // Override to Brake
             e_break.data = true;
             
@@ -106,7 +106,7 @@ private:
     void scan_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg) 
     {
  // 1. Define the total width of the safety cone in degrees
-    const double WINDOW_DEGREES = 20.0;
+    const double WINDOW_DEGREES = 10.0;
     const double WINDOW_RADIANS = WINDOW_DEGREES * (M_PI / 180.0);
 
     int num_points = scan_msg->ranges.size();

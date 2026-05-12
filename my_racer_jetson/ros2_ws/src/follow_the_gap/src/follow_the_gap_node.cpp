@@ -10,15 +10,15 @@
 // ─────────────────────────────────────────────
 //  Tunable parameters – adjust for your car/sim
 // ─────────────────────────────────────────────
-static constexpr double kMaxLidarRange      = 10.0;   // [m]  clip far returns
-static constexpr double kBubbleRadius       = 0.35;   // [m]  safety bubble radius
-static constexpr double kMinGapWidth        = 0.5;    // [m]  ignore tiny gaps
-static constexpr double kMaxSpeed           = 6.0;    // [m/s]
-static constexpr double kMinSpeed           = 1.5;    // [m/s]
-static constexpr double kStraightThreshold  = 0.08;   // [rad] ~5 deg → "straight"
-static constexpr double kMidThreshold       = 0.25;   // [rad] ~14 deg
+static constexpr double kMaxLidarRange      = 4.0;   // [m]  clip far returns
+static constexpr double kBubbleRadius       = 0.30;   // [m]  safety bubble radius
+static constexpr double kMinGapWidth        = 0.3;    // [m]  ignore tiny gaps
+static constexpr double kMaxSpeed           = 0.8;    // 0.5 [m/s]
+static constexpr double kMinSpeed           = 0.2;    // 0.15[m/s]
+static constexpr double kStraightThreshold  = 0.10;   // [rad] ~5 deg → "straight"
+static constexpr double kMidThreshold       = 0.35;   // [rad] ~14 deg
 static constexpr double kStraightSpeed      = kMaxSpeed;
-static constexpr double kMidSpeed           = 3.5;    // [m/s]
+static constexpr double kMidSpeed           = 0.4;    // 0.25[m/s]
 static constexpr double kTurnSpeed          = kMinSpeed;
  
 // ─────────────────────────────────────────────
@@ -52,8 +52,36 @@ private:
   void scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
   {
     // 1. Pre-process ranges
-    std::vector<float> ranges = preprocessRanges(msg->ranges);
-    const int N = static_cast<int>(ranges.size());
+double fov_deg = 180.0;
+double half_fov = (fov_deg / 2.0) * M_PI / 180.0;
+
+double fov_min = -half_fov;
+double fov_max =  half_fov;
+
+// Convert angles to indices
+int start_idx = static_cast<int>(
+    (fov_min - msg->angle_min) / msg->angle_increment);
+
+int end_idx = static_cast<int>(
+    (fov_max - msg->angle_min) / msg->angle_increment);
+
+// Clamp indices
+start_idx = std::max(0, start_idx);
+end_idx   = std::min(
+    static_cast<int>(msg->ranges.size()) - 1,
+    end_idx);
+
+// Extract front ranges
+std::vector<float> front_ranges(
+    msg->ranges.begin() + start_idx,
+    msg->ranges.begin() + end_idx);
+
+// Preprocess only front ranges
+std::vector<float> ranges = preprocessRanges(front_ranges);
+
+
+    //std::vector<float> ranges = preprocessRanges(msg->ranges);
+    // const int N = static_cast<int>(ranges.size());
  
     // 2. Find the closest point index
     int closest_idx = findClosest(ranges);
@@ -76,8 +104,9 @@ private:
     // 6. Convert goal index to steering angle and publish
     //    angle = angle_min + goal_idx * angle_increment
     double steering_angle =
-        msg->angle_min + goal_idx * static_cast<double>(msg->angle_increment);
- 
+        //msg->angle_min + goal_idx * static_cast<double>(msg->angle_increment);
+        fov_min + goal_idx * msg->angle_increment;
+
     // Clamp to physical limits (typical F1TENTH: ±0.4189 rad ≈ ±24°)
     steering_angle = std::clamp(steering_angle, -0.4189, 0.4189);
  
@@ -92,7 +121,7 @@ private:
   }
  
   // ── Step 1: Pre-process ───────────────────────
-  std::vector<float> preprocessRanges(const std::vector<float>& raw) const
+std::vector<float> preprocessRanges(const std::vector<float>& raw) const
   {
     std::vector<float> r(raw.size());
     for (size_t i = 0; i < raw.size(); ++i) {
@@ -201,6 +230,7 @@ private:
     // Blend: weight towards far_idx but stay within the gap center
     int mid = (gap_start + gap_end) / 2;
     // Weighted blend: 60% furthest, 40% midpoint
+    //int goal = static_cast<int>(std::round(0.6 * far_idx + 0.4 * mid));
     int goal = static_cast<int>(std::round(0.6 * far_idx + 0.4 * mid));
     goal = std::clamp(goal, gap_start, gap_end);
     return goal;

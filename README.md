@@ -61,12 +61,15 @@ code .
 
 ### 5. How to open simulator 
 
+#### 5.1 Autodrive
 On a terminal, run these commands 
 ```bash
 xhost local:root #For linux users
 ```
 
 ```bash
+cd f1tenth_gym_ros
+
 docker run --name autodrive_roboracer_sim --rm -it \
  --network=host \
  --ipc=host \
@@ -79,6 +82,25 @@ docker run --name autodrive_roboracer_sim --rm -it \
  -c "./AutoDRIVE\ Simulator.x86_64"
 ```
 Now you should see the simulator on your screen. 
+
+#### 5.2 Robogym
+```bash
+xhost local:root #For linux users
+```
+
+
+```bash
+docker run --name f1tenth_sim --rm -it \
+  --network=host \
+  --ipc=host \
+  -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+  -v .:/sim_ws/src/f1tenth_gym_ros \
+  --env DISPLAY \
+  --privileged \
+  --gpus all \
+  f1tenth_gym_ros:latest
+
+```
 
 
 

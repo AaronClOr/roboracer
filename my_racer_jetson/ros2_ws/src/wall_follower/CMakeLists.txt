@@ -13,7 +13,7 @@ find_package(ament_cmake REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
-
+find_package(ackermann_msgs REQUIRED)
 
 
 add_executable(dist_finder src/dist_finder.cpp)
@@ -28,7 +28,7 @@ install(TARGETS
 
 add_executable(wall_controller src/wall_controller_node.cpp)
 
-ament_target_dependencies(wall_controller rclcpp std_msgs)
+ament_target_dependencies(wall_controller rclcpp std_msgs ackermann_msgs)
 install(TARGETS 
   wall_controller 
   DESTINATION lib/${PROJECT_NAME})

@@ -20,7 +20,7 @@ public:
         sensor_msgs/LaserScan messages and the /ego_racecar/odom topic to get
         the nav_msgs/Odometry messages
 
-        The subscribers should use the provided odom_callback and 
+        The subscribers should use the provided odom_callback and
         scan_callback as callback methods
 
         NOTE that the x component of the linear velocity in odom is the speed
@@ -29,26 +29,29 @@ public:
         /// TODO: create ROS subscribers and publishers
 
         sub_scan = this->create_subscription<sensor_msgs::msg::LaserScan>(
-            "/scan", 
-            //"autodrive/roboracer_1/lidar",
+            //"scan",
+            "autodrive/roboracer_1/lidar",
             10,
             std::bind(&Safety::scan_callback, this, std::placeholders::_1));
 
         sub_odom = this->create_subscription<nav_msgs::msg::Odometry>(
-            "/ego_racecar/odom", 
-            //"autodrive/roboracer_1/odom",
-            10, 
+            //"/ego_racecar/odom",
+            "autodrive/roboracer_1/odom",
+            10,
             std::bind(&Safety::drive_callback, this, std::placeholders::_1));
 
-        pub_drive = this->create_publisher<ackermann_msgs::msg::AckermannDriveStamped>("/drive", 10);
-        // pub_drive = this->create_publisher<std_msgs::msg::Float32>("autodrive/roboracer_1/throttle_command", 10);
+        // pub_drive = this->create_publisher<ackermann_msgs::msg::AckermannDriveStamped>("drive", 10);
+        pub_drive = this->create_publisher<std_msgs::msg::Float32>("autodrive/roboracer_1/throttle_command", 10);
 
-        // sub_thottle = this->create_subscription<std_msgs::msg::Float32>(
+        sub_thottle = this->create_subscription<std_msgs::msg::Float32>(
+            //"/ego_racecar/odom",
+            "autodrive/roboracer_1/throttle_command_raw",
+            10,
+            std::bind(&Safety::throttle_callback, this, std::placeholders::_1));
         // pub_brake = this->create_publisher<std_msgs::msg::Float32>("autodrive/roboracer_1/throttle", 10);
         pub_brake = this->create_publisher<std_msgs::msg::Bool>(
-            //"/ego_racecar/odom", 
-            //"autodrive/roboracer_1/emergency_break",
-            "aemergency_break",            
+            //"/ego_racecar/odom",
+            "autodrive/roboracer_1/emergency_break",
             10);
 
     }
@@ -60,14 +63,9 @@ private:
 
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr sub_scan;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_odom;
-    // rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr sub_thottle;
-    // rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pub_drive;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr sub_thottle;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pub_drive;
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr pub_brake;
-
-    rclcpp::Publisher<ackermann_msgs::msg::AckermannDriveStamped>::SharedPtr pub_drive;
-
-
-
 
     // rclcpp::Publisher<ackermann_msgs::msg::AckermannDriveStamped>::SharedPtr pub_drive;
     /// TODO: create ROS subscribers and publishers
@@ -79,8 +77,33 @@ private:
 
     }
 
+     void throttle_callback(const std_msgs::msg::Float32::ConstSharedPtr msg)
+    {
+        /// TODO: update current speed
+        // auto message_drive = std_msgs::msg::Float32();
+        auto message_to_publish = std_msgs::msg::Float32();
+        auto e_break = std_msgs::msg::Bool();
 
-    void scan_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg) 
+        // 1. Check the safety condition determined by the scan_callback
+        if (ttc <= 0.7) {
+            message_to_publish.data = 0.0; // Override to Brake
+            e_break.data = true;
+
+            RCLCPP_WARN(this->get_logger(), "EMERGENCY BRAKE! TTC: %f", ttc);
+        } else {
+            message_to_publish.data = msg->data; // Pass through the user command
+            e_break.data = false;
+
+        }
+
+        // 2. Publish only when we get a new command from the user
+        pub_brake->publish(e_break);
+        pub_drive->publish(message_to_publish);
+
+
+    }
+
+    void scan_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg)
     {
  // 1. Define the total width of the safety cone in degrees
     const double WINDOW_DEGREES = 10.0;
@@ -113,21 +136,20 @@ private:
         double r = scan_msg->ranges[i];
         if (!std::isfinite(r) || r < scan_msg->range_min || r > scan_msg->range_max) continue;
 
+        // Compute the angle of this ray relative to forward (0.0)
         double ray_angle = scan_msg->angle_min + i * scan_msg->angle_increment;
-        double r_projected = r * std::cos(ray_angle);
-        if (r_projected <= 0.0) continue;
 
-        // ✅ Check speed here but still mark a valid point
+        // Project: only the forward component of distance matters for closing speed
+        // r_projected = r * cos(ray_angle)  →  how far ahead the obstacle is
+        double r_projected = r * std::cos(ray_angle);
+        if (r_projected <= 0.0) continue; // behind or perpendicular, skip
+
         if (speed > 0.05) {
             double ray_ttc = r_projected / speed;
             if (ray_ttc < min_ttc) {
                 min_ttc = ray_ttc;
                 found_valid_point = true;
             }
-        } else {
-            // Car is nearly stopped — TTC is effectively infinite, don't brake
-            found_valid_point = true; // still found an obstacle
-            min_ttc = 999.9;
         }
     }
 
@@ -139,28 +161,6 @@ private:
         ttc = 999.9;
     }
 
-
-    auto message_to_publish = ackermann_msgs::msg::AckermannDriveStamped();        
-    auto e_break = std_msgs::msg::Bool();
-        
-        // 1. Check the safety condition determined by the scan_callback
-    if (ttc <= 1.0) {
-        message_to_publish.header.stamp = this->get_clock()->now();
-
-            //message_to_publish.data = 0.0; // Override to Brake
-        message_to_publish.drive.speed = 0.0;
-        e_break.data = true;
-        pub_drive->publish(message_to_publish);
-        RCLCPP_WARN(this->get_logger(), "EMERGENCY BRAKE! TTC: %f", ttc);
-    } else {
-        e_break.data = false;
-
-    }
-
-        // 2. Publish only when we get a new command from the user
-    pub_brake->publish(e_break);
-    
-    
     }
 
 

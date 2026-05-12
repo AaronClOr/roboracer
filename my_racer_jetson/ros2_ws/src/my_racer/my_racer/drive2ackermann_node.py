@@ -7,6 +7,7 @@ class TwistToAckermann(Node):
     def __init__(self):
         super().__init__('twist_to_ackermann')
         self.subscription = self.create_subscription(Twist, '/cmd_vel', self.listener_callback, 10)
+        ## self.publisher = self.create_publisher(AckermannDriveStamped, '/drive', 10)
         self.publisher = self.create_publisher(AckermannDriveStamped, '/drive', 10)
 
     def listener_callback(self, msg):

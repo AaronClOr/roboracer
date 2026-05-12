@@ -12,15 +12,15 @@ public:
   DisFinder() : Node("dis_finder")
   {
     // Angle between beam a and beam b (in degrees, configurable)
-    this->declare_parameter<double>("theta_deg", -45.0);
+    this->declare_parameter<double>("theta_deg", 45.0);
     this->declare_parameter<double>("lookahead", 0.7);
 
 
     scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
-      "/scan", 10,
+      "/autodrive/roboracer_1/lidar", 10,
       std::bind(&DisFinder::scan_callback, this, std::placeholders::_1));
-    
-    wall_data_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("/wall_data", 10);  
+
+    wall_data_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("/wall_data", 10);
     RCLCPP_INFO(this->get_logger(), "DisFinder node started.");
   }
 
@@ -32,7 +32,7 @@ private:
   {
     double theta_deg = this->get_parameter("theta_deg").as_double();
     double L = this->get_parameter("lookahead").as_double();
-    double theta = std::abs(theta_deg * M_PI / 180.0);
+    double theta = theta_deg * M_PI / 180.0;
 
     // --- Step 1: Obtain distances a and b ---
     //
@@ -41,9 +41,9 @@ private:
     //
     // LiDAR angles: 0 = forward, positive = left, negative = right
 
-    double angle_b = M_PI / 2.0;            // +90° left wall
-    //double angle_b = -80.0 * M_PI / 180.0;   //80
-    double angle_a = angle_b - theta;         // θ ahead of b
+    //double angle_b = -M_PI / 2.0;            // 90° right
+    double angle_b = -80.0 * M_PI / 180.0;   //70
+    double angle_a = angle_b + theta;         // θ ahead of b
 
     double b = get_range(msg, angle_b);
     double a = get_range(msg, angle_a);
@@ -60,7 +60,7 @@ private:
     //          a·sin(θ)
 
     double alpha = std::atan2(a * std::cos(theta) - b, a * std::sin(theta));
-    
+
 
     RCLCPP_INFO(this->get_logger(),
       "a=%.3f m | b=%.3f m | theta=%.1f° | alpha=%.3f rad (%.1f°)",
@@ -71,7 +71,7 @@ private:
     // D_t   = b · cos(α)
     // D_t+1 = D_t + L · sin(α)
 
-    
+
     double D_t   = b * std::cos(alpha);
     double D_t1  = D_t + L * std::sin(alpha);
 
@@ -80,7 +80,7 @@ private:
     a, b, alpha * 180.0 / M_PI, D_t, D_t1);
 
 
-    // --- Step 4: send data to topic 
+    // --- Step 4: send data to topic
 
     auto msg_out = std_msgs::msg::Float64MultiArray();
     msg_out.data = {D_t1, alpha};

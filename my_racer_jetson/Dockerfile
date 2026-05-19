@@ -32,6 +32,10 @@ RUN apt-get update || true && \
     ros-humble-teleop-twist-joy \
     ros-humble-ackermann-msgs \
     ros-humble-teleop-twist-keyboard \
+    python3-opencv \
+    python3-scipy \
+    python3-skimage \
+    python3-yaml \
     && rm -rf /var/lib/apt/lists/*
 # 4. Copy the source code
 # Ensure your local folder is named 'ros2_ws/src'

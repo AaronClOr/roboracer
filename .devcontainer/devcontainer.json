@@ -13,5 +13,8 @@
             ]
         }
     },
-    "remoteUser": "root"
+    "remoteUser": "root",
+    "postCreateCommand": "sudo apt-get update && sudo apt-get install -y ros-humble-slam-toolbox ros-humble-nav2-map-server"
+
+    
 }
